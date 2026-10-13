@@ -1,12 +1,22 @@
+"""
+应用主配置
+
+定义 conf/app_config.yaml 在程序中的结构化配置对象
+项目启动后会在这里一次性完成配置文件加载和类型化转换，其他模块只需要导入 app_config
+就可以按属性方式读取日志 MySQL Qdrant Embedding Elasticsearch 和 LLM 配置
+"""
+
 from dataclasses import dataclass
 from pathlib import Path
 
+from dotenv import load_dotenv
 from omegaconf import OmegaConf
 
 
-# 文件日志配置，对应 logging.file 这一组参数
 @dataclass
 class File:
+    """文件日志配置"""
+
     enable: bool
     level: str
     path: str
@@ -14,24 +24,26 @@ class File:
     retention: str
 
 
-# 控制台日志配置，对应 logging.console 这一组参数
 @dataclass
 class Console:
+    """控制台日志配置"""
+
     enable: bool
     level: str
 
 
-# 把 file 和 console 两组日志配置再组合成 logging 总配置
 @dataclass
 class LoggingConfig:
+    """日志总配置"""
+
     file: File
     console: Console
 
 
-# 数据库配置
-# 这里的结构既会给元数据库 db_meta 用，也会给数据仓库模拟库 db_dw 用
 @dataclass
 class DBConfig:
+    """MySQL 连接配置"""
+
     host: str
     port: int
     user: str
@@ -41,39 +53,44 @@ class DBConfig:
 
 @dataclass
 class QdrantConfig:
+    """Qdrant 连接与向量维度配置"""
+
     host: str
     port: int
     embedding_size: int
 
 
-# Embedding 服务配置，对应 YAML 里的 embedding 分组
 @dataclass
 class EmbeddingConfig:
+    """Embedding 服务配置"""
+
     host: str
     port: int
     model: str
 
 
-# Elasticsearch 配置，对应 YAML 里的 es 分组
 @dataclass
 class ESConfig:
+    """Elasticsearch 配置"""
+
     host: str
     port: int
     index_name: str
 
 
-# 大模型配置，对应 YAML 里的 llm 分组
 @dataclass
 class LLMConfig:
+    """大模型调用配置"""
+
     model_name: str
     api_key: str
     base_url: str
 
 
-# AppConfig 是整个项目配置的总入口
-# 这里的字段名，需要和 app_config.yaml 的顶层字段保持一致
 @dataclass
 class AppConfig:
+    """项目级总配置入口"""
+
     logging: LoggingConfig
     db_meta: DBConfig
     db_dw: DBConfig
@@ -83,19 +100,22 @@ class AppConfig:
     llm: LLMConfig
 
 
-# 从当前文件 app/conf/app_config.py 出发，回到项目根目录
-# 再定位到 conf/app_config.yaml 这个配置文件
-config_file = Path(__file__).parents[2] / 'conf' / 'app_config.yaml'
+# 从当前文件位置回到项目根目录，再定位到 conf/app_config.yaml
+project_root = Path(__file__).parents[2]
+config_file = project_root / "conf" / "app_config.yaml"
+
+# 先读取本地 .env，让 YAML 中的 ${oc.env:...} 可以解析到敏感配置
+load_dotenv(project_root / ".env")
 
 # 读取 YAML 配置内容
 context = OmegaConf.load(config_file)
 
-# 根据 AppConfig 生成一份“结构化配置 schema”
+# 根据 AppConfig 生成结构化配置 schema
 schema = OmegaConf.structured(AppConfig)
 
-# 把“配置结构”和“配置值”合并，再转换成真正可直接访问属性的对象
+# 把配置结构和配置值合并，再转换成可以直接按属性访问的对象
 app_config: AppConfig = OmegaConf.to_object(OmegaConf.merge(schema, context))
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # 简单测试：验证配置是否能正常读取
     print(app_config.es.host)
