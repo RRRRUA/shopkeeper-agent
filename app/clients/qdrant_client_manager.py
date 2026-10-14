@@ -22,7 +22,7 @@ class QdrantClientManager:
         self.qdrant_config = qdrant_config
         # 先把 client 声明出来，真正初始化放到 init() 中进行
         self.client: Optional[AsyncQdrantClient] = None
-
+    # python命名约定：这是类内部使用的方法，不建议外部直接调用。
     def _get_url(self) -> str:
         """拼接 Qdrant 服务地址"""
         return f"http://{self.qdrant_config.host}:{self.qdrant_config.port}"
